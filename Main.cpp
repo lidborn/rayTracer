@@ -61,7 +61,78 @@ struct Sphere
 	Color3 color;
 };
 
-bool rayPlaneCollision(Ray & ray, Plane & plane, float& t)
+struct Box
+{
+	Box(Vector3 centre, Vector3 u, float hu, Vector3 v, float hv, Vector3 w, float hw, Color3 color)
+	{
+		this->centre = centre;
+
+		this->u = u;
+		this->hu = hu;
+
+		this->v = v;
+		this->hv = hv;
+
+		this->w = w;
+		this->hw = hw;
+
+		this->color = color;
+
+		vecArray[0] = u;
+		vecArray[1] = v;
+		vecArray[2] = w;
+
+		lengthArray[0] = hu;
+		lengthArray[1] = hv;
+		lengthArray[2] = hw;
+	}
+
+	Box() {};
+
+	Vector3 centre;
+
+	Vector3 u;
+	float hu; //Half of the box's length in u's direction
+
+	Vector3 v;
+	float hv; //Half of the box's length in v's direction
+
+	Vector3 w;
+	float hw; //Half of the box's length in w's direction
+
+	Vector3 vecArray[3];
+	float lengthArray[3];
+
+	Color3 color;
+};
+
+template<class num>
+num min(num a, num b)
+{
+	if (a < b)
+		return a;
+	else
+		return b;
+};
+
+template<class num>
+num max(num a, num b)
+{
+	if (a > b)
+		return a;
+	else
+		return b;
+};
+
+template<class num>
+void swap(num& a, num& b)
+{
+	num temp = b;
+	b = a;
+	a = temp;
+};
+
+bool rayPlaneCollision(Ray& ray, Plane& plane, float& t)
 {
 	float n_dot_d = dot(plane.normal, ray.direction); //normal dot direction
 
@@ -74,16 +145,7 @@ bool rayPlaneCollision(Ray & ray, Plane & plane, float& t)
 	return true;
 };
 
-template<class num>
-num min(num a, num b)
-{
-	if (a < b)
-		return a;
-	else
-		return b;
-};
-
-bool raySphereCollision(Ray & ray, Sphere & sphere, float& t)
+bool raySphereCollision(Ray& ray, Sphere& sphere, float& t)
 {
 	float b = dot(ray.direction, (ray.origin - sphere.centre));
 	float c = dot((ray.origin - sphere.centre), (ray.origin - sphere.centre)) - pow(sphere.radius, 2);
@@ -99,7 +161,7 @@ bool raySphereCollision(Ray & ray, Sphere & sphere, float& t)
 	}
 	else
 		return false;
-	
+
 	t = min(t1, t2);
 	//std::cout << t << std::endl;
 
@@ -108,6 +170,114 @@ bool raySphereCollision(Ray & ray, Sphere & sphere, float& t)
 	else
 		return false;
 };
+
+//bool rayTriangleCollision()
+//{
+//}
+
+bool rayBoxCollision(Ray& ray, Box& box, float& t)
+{
+	float min = -100000000.f;
+	float max = 100000000.0f;
+
+	//f is min, e is max
+	Vector3 p = box.centre - ray.origin;
+
+	for (int i = 0; i < 3; i++)
+	{
+		float e = dot(box.vecArray[i], p);
+		//std::cout << "e is  " <<e<< std::endl;
+		float f = dot(ray.origin, box.vecArray[i]);
+		//std::cout << "abs F\t" <<abs(f)<<std::endl;
+		if (abs(f) > 0.0000000001f)
+		{
+
+			float t1 = e + box.lengthArray[i] / f;
+			float t2 = e - box.lengthArray[i] / f;
+
+				//std::cout << "t1 " << t1 <<std::endl;
+			//std::cout << "t2 " << t2 <<std::endl << std::endl;
+
+
+			if (t1 > t2)
+				swap(t1, t2);
+			{
+				//std::cout << "t1 " << t1 << std::endl;
+				//std::cout << "t2 " << t2 << std::endl << std::endl;
+				//std::cin.get();
+			}
+			if (t1 > min)
+			{
+				min = t1;
+				//std::cout << "min " << min << std::endl;
+			}
+			if (t2 < max)
+			{
+				max = t2;
+				//std::cout << "max " << max << std::endl;
+			}
+
+			if (min > max)
+			{
+
+				//std::cout << "min was bigger "<<std::endl;
+				return false;
+			}
+			if (max < 0)
+			{
+
+				//std::cout << "max was bigger " << std::endl;
+				return false;
+			}
+		}
+		else if (-e - box.lengthArray[i] > 0 || -e + box.lengthArray[i] < 0)
+			return false;
+	}
+	//std::cout << "min " << min <<std::endl;
+	//std::cout << "max " << max <<std::endl;
+
+	if (min > 0)
+	{
+		t = min;
+		//std::cout << t << std::endl;
+		return true;
+	}
+	else
+	{
+		t = max;
+		//std::cout << t << std::endl;
+		return true;
+	}
+		
+
+
+
+
+
+	//min = (box.min.x() - )
+	/*float ymin = (box.min.y() - ray.origin.y()) / ray.direction.y(); //Y-axis slab
+	float ymax = (box.max.y() - ray.origin.y()) / ray.direction.y();
+	if (ymin > ymax)
+		swap(ymin, ymax);
+
+	float xmin = (box.min.x() - ray.origin.x()) / ray.direction.y(); //Y-axis slab
+	float xmax = (box.max.x() - ray.origin.x()) / ray.direction.y();
+	if (xmin > xmax)
+		swap(xmin, xmax);
+
+	float zmin = (box.min.z() - ray.origin.z()) / ray.direction.z(); //Z-axis slab
+	float zmax = (box.max.z() - ray.origin.z()) / ray.direction.z();
+	if (zmin > zmax)
+		swap(zmin, zmax);
+
+	float tmin = */
+
+	//Vector3 obbCentre = ((box.max - box.min) / 2);
+	//Vector3 p = obbCentre - ray.origin;
+	//float e = dot(Vector3(x, y, z), p);
+	//float f = dot(Vector3(x, y, z), ray.direction);
+
+}
 
 int main()
 {
@@ -123,6 +293,9 @@ int main()
 	sphere.centre = Vector3(50, 100, 45);
 	sphere.color = Color3(255, 0, 0);
 
+	Box box(Vector3(50, 50, 50), Vector3(1, 0, 0), 50.f, Vector3(0, 1, 0), 50.f, Vector3(0, 0, 1), 50.f, Color3(255, 255, 255));//Center, 3 vectors each followed by their length
+
+
 	//setPixel(image_map, 0, 0, Color3(255,50,255));
 
 	for (int y = 0; y < H; y++)
@@ -135,6 +308,7 @@ int main()
 			float t = 0;
 			bool hitPlane = rayPlaneCollision(ray, plane, t);
 			bool hitSphere = raySphereCollision(ray, sphere, t);
+			bool hitBox = rayBoxCollision(ray, box, t);
 
 			if (hitPlane)
 			{
@@ -145,6 +319,13 @@ int main()
 			{
 				//std::cout << "Hit sphere" << std::endl;
 				setPixel(image_map, x, y, sphere.color);
+			}
+
+			if (hitBox)
+			{
+
+				std::cout << "Hit box" << std::endl;
+				setPixel(image_map, x, y, box.color);
 			}
 		}
 	}

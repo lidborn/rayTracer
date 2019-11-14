@@ -1,3 +1,4 @@
+//Jakob Lidborn, Christian Leo, Ghazi Hicheri | 2019-11-14
 #include "Vector3.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
@@ -58,6 +59,25 @@ struct Sphere
 {
 	Vector3 centre;
 	float radius = 1;
+	Color3 color;
+};
+
+struct Triangle
+{
+	Triangle(Vector3 a, Vector3 b, Vector3 c, Vector3 normal, Color3 color)
+	{
+		pointA = a; 
+		pointB = b;
+		pointC = c;
+
+		this->normal = normal;
+		this->color = color;
+	}
+
+	Triangle() {};
+
+	Vector3 pointA, pointB, pointC;
+	Vector3 normal;
 	Color3 color;
 };
 
@@ -157,13 +177,11 @@ bool raySphereCollision(Ray& ray, Sphere& sphere, float& t)
 	{
 		t1 = -b + sqrt(pow(b, 2) - c);
 		t2 = -b - sqrt(pow(b, 2) - c);
-		//std::cout << "T1: " << t1 << " T2: " << t2 << std::endl;
 	}
 	else
 		return false;
 
 	t = min(t1, t2);
-	//std::cout << t << std::endl;
 
 	if (t != 0)
 		return true;
@@ -171,117 +189,91 @@ bool raySphereCollision(Ray& ray, Sphere& sphere, float& t)
 		return false;
 };
 
-//bool rayTriangleCollision()
-//{
-//}
+bool rayTriangleCollision(Ray& ray, Triangle& triangle, float& t)
+{
+	//Transform into unit triangle at origin for testing.
+	//We might want to return u and w later
+
+	float epsilon = 0.000000001f;
+	Vector3 e1 = triangle.pointB - triangle.pointA; //Edge 1
+	Vector3 e2 = triangle.pointC - triangle.pointA; //Edge 2
+	Vector3 q = cross(ray.direction, e2); //note to self for debugging: could try triangle's direction
+	float a = dot(e1, q);
+	if (a > -epsilon && a < epsilon) //If close to 0, then floating point error for 0.
+		return false;
+	float f = 1 / a;
+	Vector3 s = ray.origin-triangle.pointA;	float u = f * (dot(s, q)); //Don't need this for now.
+	if (u < 0.0f)
+		return false;
+	Vector3 r = cross(s, e1);
+	float v = f*(dot(ray.direction, r)); //Don't need this for now.
+	if (v < 0.0f || u + v > 1.0f)
+		return false;
+	t = f * dot(e2, r);
+	return true;
+
+}
 
 bool rayBoxCollision(Ray& ray, Box& box, float& t)
 {
+
 	float min = -100000000.f;
 	float max = 100000000.0f;
 
-	//f is min, e is max
 	Vector3 p = box.centre - ray.origin;
 
+	//Check all 3 slabs
 	for (int i = 0; i < 3; i++)
 	{
 		float e = dot(box.vecArray[i], p);
-		//std::cout << "e is  " <<e<< std::endl;
-		float f = dot(ray.origin, box.vecArray[i]);
-		//std::cout << "abs F\t" <<abs(f)<<std::endl;
+		float f = dot(box.vecArray[i],ray.direction );
 		if (abs(f) > 0.0000000001f)
 		{
 
 			float t1 = e + box.lengthArray[i] / f;
 			float t2 = e - box.lengthArray[i] / f;
 
-				//std::cout << "t1 " << t1 <<std::endl;
-			//std::cout << "t2 " << t2 <<std::endl << std::endl;
-
-
 			if (t1 > t2)
-				swap(t1, t2);
 			{
-				//std::cout << "t1 " << t1 << std::endl;
-				//std::cout << "t2 " << t2 << std::endl << std::endl;
-				//std::cin.get();
+				swap(t1, t2);
 			}
 			if (t1 > min)
 			{
 				min = t1;
-				//std::cout << "min " << min << std::endl;
 			}
 			if (t2 < max)
 			{
 				max = t2;
-				//std::cout << "max " << max << std::endl;
 			}
 
 			if (min > max)
 			{
-
-				//std::cout << "min was bigger "<<std::endl;
 				return false;
 			}
 			if (max < 0)
 			{
-
-				//std::cout << "max was bigger " << std::endl;
 				return false;
 			}
 		}
 		else if (-e - box.lengthArray[i] > 0 || -e + box.lengthArray[i] < 0)
 			return false;
 	}
-	//std::cout << "min " << min <<std::endl;
-	//std::cout << "max " << max <<std::endl;
 
 	if (min > 0)
 	{
 		t = min;
-		//std::cout << t << std::endl;
 		return true;
 	}
 	else
 	{
 		t = max;
-		//std::cout << t << std::endl;
 		return true;
 	}
-		
-
-
-
-
-
-	//min = (box.min.x() - )
-	/*float ymin = (box.min.y() - ray.origin.y()) / ray.direction.y(); //Y-axis slab
-	float ymax = (box.max.y() - ray.origin.y()) / ray.direction.y();
-	if (ymin > ymax)
-		swap(ymin, ymax);
-
-	float xmin = (box.min.x() - ray.origin.x()) / ray.direction.y(); //Y-axis slab
-	float xmax = (box.max.x() - ray.origin.x()) / ray.direction.y();
-	if (xmin > xmax)
-		swap(xmin, xmax);
-
-	float zmin = (box.min.z() - ray.origin.z()) / ray.direction.z(); //Z-axis slab
-	float zmax = (box.max.z() - ray.origin.z()) / ray.direction.z();
-	if (zmin > zmax)
-		swap(zmin, zmax);
-
-	float tmin = */
-
-	//Vector3 obbCentre = ((box.max - box.min) / 2);
-	//Vector3 p = obbCentre - ray.origin;
-	//float e = dot(Vector3(x, y, z), p);
-	//float f = dot(Vector3(x, y, z), ray.direction);
-
 }
 
 int main()
 {
-	uint8_t image_map[W * H * C_CHANNELS]{ 0 };// = new uint8_t[W * H * C_CHANNELS]{ 0 };
+	uint8_t image_map[W * H * C_CHANNELS]{ 0 };
 
 	Plane plane;
 	plane.distance = -100;
@@ -289,11 +281,17 @@ int main()
 	plane.color = Color3(0, 100, 100);
 
 	Sphere sphere;
-	sphere.radius = 60;
-	sphere.centre = Vector3(50, 100, 45);
+	sphere.radius = 50;
+	sphere.centre = Vector3(80, 100, 25);
 	sphere.color = Color3(255, 0, 0);
 
-	Box box(Vector3(50, 50, 50), Vector3(1, 0, 0), 50.f, Vector3(0, 1, 0), 50.f, Vector3(0, 0, 1), 50.f, Color3(255, 255, 255));//Center, 3 vectors each followed by their length
+	Triangle triangle;
+	triangle.pointA = Vector3(W, 0, 25);
+	triangle.pointB = Vector3(W, H, 25);
+	triangle.pointC = Vector3(50, 0, 25);
+	triangle.color = Color3(100, 37, 90);
+
+	Box box(Vector3(70.f, 70.f, 25.f), Vector3(1, 0, 0), 50.f, Vector3(0, 1, 0), 50.f, Vector3(0, 0, 1), 50.f, Color3(255, 255, 255));//Center, 3 vectors each followed by their length
 
 
 	//setPixel(image_map, 0, 0, Color3(255,50,255));
@@ -305,11 +303,41 @@ int main()
 			Ray ray;
 			ray.direction = Vector3(0, 0, 1);
 			ray.origin = Vector3(x, y, 0);
-			float t = 0;
-			bool hitPlane = rayPlaneCollision(ray, plane, t);
-			bool hitSphere = raySphereCollision(ray, sphere, t);
-			bool hitBox = rayBoxCollision(ray, box, t);
+			float t = 10000;
+			float currentDepth = 0;
+			bool hitPlane = rayPlaneCollision(ray, plane, currentDepth);
+			if (currentDepth < t && t > 0) //Check it closest and in front of camera, otherwise we might as well pretend we didn't hit it.
+			{
+				t = currentDepth;
+			}
+			else
+				hitPlane = false;
 
+			bool hitSphere = raySphereCollision(ray, sphere, currentDepth);
+			if (currentDepth < t && t > 0) //Check it closest and in front of camera, otherwise we might as well pretend we didn't hit it.
+			{
+				t = currentDepth;
+			}
+			else
+				hitSphere = false;
+
+			bool hitBox = rayBoxCollision(ray, box, currentDepth);
+			if (currentDepth < t && t > 0) //Check it closest and in front of camera, otherwise we might as well pretend we didn't hit it.
+			{
+				t = currentDepth;
+			}
+			else
+				hitBox = false;
+
+			bool hitTriangle = rayTriangleCollision(ray, triangle, currentDepth);
+			if (currentDepth < t && t > 0) //Check it closest and in front of camera, otherwise we might as well pretend we didn't hit it.
+			{
+				t = currentDepth;
+			}
+			else
+				hitTriangle = false;
+			
+			//------------------------------------------------------ Drawing Below	
 			if (hitPlane)
 			{
 				setPixel(image_map, x, y, plane.color);
@@ -317,21 +345,22 @@ int main()
 
 			if (hitSphere)
 			{
-				//std::cout << "Hit sphere" << std::endl;
 				setPixel(image_map, x, y, sphere.color);
 			}
 
 			if (hitBox)
 			{
-
-				std::cout << "Hit box" << std::endl;
 				setPixel(image_map, x, y, box.color);
+			}
+
+			if (hitTriangle)
+			{
+				setPixel(image_map, x, y, triangle.color);
 			}
 		}
 	}
 
-	stbi_write_png("output.png", W, H, C_CHANNELS, image_map, W * C_CHANNELS);
-	//delete[] image_map;
+	stbi_write_png("Jakob Lidborn, Christian Leo, Ghazi Hicheri - 2019-11-14.png", W, H, C_CHANNELS, image_map, W * C_CHANNELS);
 	return 0;
 }
 

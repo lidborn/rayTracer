@@ -1,3 +1,5 @@
+//Jakob Lidborn, Christian Leo, Ghazi Hicheri | 2019-11-14
+
 #pragma once
 #include <math.h>
 #include <iostream>
